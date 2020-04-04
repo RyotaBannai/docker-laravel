@@ -1,22 +1,33 @@
 version: "3"
 services:
   app:
-    build:
+    build: # image があればタグ名などでコンテナをサービスにアタッチする. 今回は一からbuildする.
       context: ./docker/php
       args:
         - TZ=${TZ:-Asia/Tokyo}
     ports:
       - ${APP_PORT:-18000}:8000
+      # - "8888:8000" # Dockerfileではexpose 8000 などで指定して、
+                      # 起動する時に docker run -p 8888:8000 --name myfirstapp myfirstapp などとすると 8888でアクセスできる.
     volumes:
-      - ${PROJECT_PATH:-./src}:/work
+      # https://www.nyamucoro.com/entry/2018/08/13/222617
+      # php:
+      # 手元で./webにプログラムを書いた時に、コンテナに自動反映される。
+      # 普通なら、 docker buildで何度もコンテナ作り直す必要があるので便利。
+      # mysql:
+      # データの永続化。
+      # 普段、コンテナを落とすと、コンテナの中のデータは一から作り直しになってしまう。
+      # でも、手元のデータをマウントしているなら、コンテナを立ち上げる度にデータが消えない。
+
+      - ${PROJECT_PATH:-./src}:/work # https://docs.docker.com/compose/compose-file/#variable-substitution
       - ./docker/ash:/etc/profile.d
       - ./docker/php/psysh:/root/.config/psysh
       - ./logs:/var/log/php
       - ./docker/php/php.ini:/usr/local/etc/php/php.ini
-    working_dir: /work
+
+    working_dir: /work # docker compose でもwork dir を指定できる.
     environment:
       - DB_CONNECTION=mysql
-      - DB_HOST=db
       - DB_DATABASE=${DB_NAME:-homestead}
       - DB_USERNAME=${DB_USER:-homestead}
       - DB_PASSWORD=${DB_PASS:-secret}
@@ -24,9 +35,15 @@ services:
       - MAIL_HOST=${MAIL_HOST:-mail}
       - MAIL_PORT=${MAIL_PORT:-1025}
       - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
+#      - SESSION_DRIVER=redis # エラーになるなあ。
+  #　https://stackoverflow.com/questions/46170739/how-to-setup-laravel-session-storage-to-redis
       - QUEUE_DRIVER=redis
-      - REDIS_HOST=redis
+      - REDIS_HOSfT=redis
+    #links:
+    #  - redis
+    env_file:
+      # - ./src/.env
+      - .env
 
   web:
     image: nginx:1.17-alpine
@@ -44,6 +61,7 @@ services:
   db:
     image: mysql:8.0
     volumes:
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d # 初期データを投入するSQLが格納されているdir
       - db-store:/var/lib/mysql
       - ./logs:/var/log/mysql
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
@@ -81,8 +99,11 @@ services:
 
   redis:
     image: redis:5.0-alpine
+    ports:
+      - "6379:6379"
     volumes:
       - redis-store:/data
+
 
   mail:
     image: mailhog/mailhog
@@ -90,5 +111,5 @@ services:
       - ${MAILHOG_PORT:-18025}:8025
 
 volumes:
-  db-store:
+  db-store: # db-data のように、docker-compose.yml トップレベルに名前をつけて宣言された volume を「名前つき volume（named volume）」と呼ぶ.
   redis-store:

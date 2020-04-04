@@ -4,6 +4,9 @@ LABEL maintainer="ucan-lab <info@u-can.tech>"
 SHELL ["/bin/ash", "-oeux", "pipefail", "-c"]
 
 # tinker(psysh)
+# 環境変数であるENVとは異なり、Dockerfile 内でのみこの変数を使用することができる.
+# ENVでは、コンテナ内で環境変数として変数が定義される.
+# ENVを使用する場合は、CMDやENTRYPOINTによって実行されたコマンドに適しており、ARGは、変数を展開した状態でコンテナ内にファイルを配置したい場合に有効.
 ARG PSYSH_DIR=/usr/local/share/psysh
 ARG PSYSH_PHP_MANUAL=$PSYSH_DIR/php_manual.sqlite
 ARG PHP_MANUAL_URL=http://psysh.org/manual/ja/php_manual.sqlite
